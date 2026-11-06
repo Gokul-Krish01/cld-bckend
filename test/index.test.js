@@ -4,7 +4,7 @@ import worker from '../src/index.js';
 
 describe('Cloudflare Worker API Tests', () => {
   it('GET / should return welcome message', async () => {
-    const req = new Request('http://localhost/');
+    const req = new Request('http://localhot/');
     const res = await worker.fetch(req);
     const text = await res.text();
     
