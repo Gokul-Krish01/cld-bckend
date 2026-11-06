@@ -1,6 +1,8 @@
 let items = [];
-
 export default {
+   async fetch(request, env, ctx) {
+    return new Response("Hello from Cloudflare Worker! CI/CD is working perfectly 🚀");
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
