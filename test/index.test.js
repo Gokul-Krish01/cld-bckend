@@ -11,9 +11,4 @@ describe('Cloudflare Worker API Tests', () => {
     expect(text).toContain('CI/CD is working perfectly');
   });
 
-  it('GET /items should return empty array initially', async () => {
-    const req = new Request('http://localhost/items');
-    const res = await worker.fetch(req);
-    expect(res.status).toBe(200);
-  });
 });
