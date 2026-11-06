@@ -6,12 +6,12 @@ compatibility_date = "2026-01-01"
 [env.production]
 name = "cld-bckend-prod"
 d1_databases = [
-  { binding = "DB", database_name = "cld-bckend-db", database_id = "4b4cba78-f6af-435b-881a-16653589af20" }
+  { binding = "DB", database_name = "cld-bckend-db", database_id = "257b4bba-b658-4a89-8575-2a4debf76684" }
 ]
 
 # Staging Environment
 [env.staging]
 name = "cld-bckend-staging"
 d1_databases = [
-  { binding = "DB", database_name = "cld-bckend-db", database_id = "4b4cba78-f6af-435b-881a-16653589af20" }
+  { binding = "DB", database_name = "cld-bckend-db", database_id = "257b4bba-b658-4a89-8575-2a4debf76684" }
 ]
