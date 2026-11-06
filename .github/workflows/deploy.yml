@@ -6,9 +6,10 @@ on:
       - main
 
 jobs:
-  deploy:
+  # 1️⃣ Stage 1: Build Phase
+  build:
     runs-on: ubuntu-latest
-    name: Test and Deploy
+    name: Build Project
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -21,11 +22,47 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # 🧪 1. Direct Deploy-ku Munnadi Testing Step!
-      - name: Run Tests
+      # Oru vela build step thevai patta inge add panlam (e.g., npm run build)
+      - name: Verify Build
+        run: echo "Build step completed successfully!"
+
+  # 2️⃣ Stage 2: Test Phase (Build mudinjathum run aagum)
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Run Tests
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Unit Tests
         run: npm test
 
-      # 🚀 2. Tests PASS aana mattumae intha step execute aagum!
+  # 3️⃣ Stage 3: Deploy Phase (Tests ellam PASS aana mattumae run aagum)
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
