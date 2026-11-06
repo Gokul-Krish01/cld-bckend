@@ -1,8 +1,6 @@
 let items = [];
+
 export default {
-   async fetch(request, env, ctx) {
-    return new Response("Hello from Cloudflare Worker! CI/CD is working perfectly 🚀");
-  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
@@ -16,12 +14,21 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
+    // 1. Root path check (Welcome message)
+    if (url.pathname === '/') {
+      return new Response("Hello from Cloudflare Worker! CI/CD is working perfectly 🚀", {
+        headers: corsHeaders
+      });
+    }
+
+    // 2. GET /items
     if (request.method === 'GET' && url.pathname === '/items') {
       return new Response(JSON.stringify(items), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
+    // 3. POST /items
     if (request.method === 'POST' && url.pathname === '/items') {
       try {
         const body = await request.json();
@@ -39,6 +46,7 @@ export default {
       }
     }
 
+    // 4. DELETE /items/:id
     if (request.method === 'DELETE' && url.pathname.startsWith('/items/')) {
       const index = parseInt(url.pathname.split('/')[2]);
       if (!isNaN(index) && index >= 0 && index < items.length) {
