@@ -8,10 +8,16 @@ name = "cld-bckend-prod"
 d1_databases = [
   { binding = "DB", database_name = "cld-bckend-db", database_id = "257b4bba-b658-4a89-8575-2a4debf76684" }
 ]
+r2_buckets = [
+  { binding = "cld_bckend_bucket", bucket_name = "cld-bckend-bucket" }
+]
 
 # Staging Environment
 [env.staging]
 name = "cld-bckend-staging"
 d1_databases = [
   { binding = "DB", database_name = "cld-bckend-db", database_id = "257b4bba-b658-4a89-8575-2a4debf76684" }
+]
+r2_buckets = [
+  { binding = "cld_bckend_bucket", bucket_name = "cld-bckend-bucket" }
 ]
