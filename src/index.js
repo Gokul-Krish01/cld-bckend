@@ -1,5 +1,3 @@
-let items = [];
-
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -23,9 +21,19 @@ export default {
 
     // 2. GET /items
     if (request.method === 'GET' && url.pathname === '/items') {
-      return new Response(JSON.stringify(items), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      try {
+        const { results } = await env.DB.prepare("SELECT text FROM items ORDER BY id ASC").all();
+        const itemsList = results.map(row => row.text);
+
+        return new Response(JSON.stringify(itemsList), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     // 3. POST /items
@@ -33,9 +41,14 @@ export default {
       try {
         const body = await request.json();
         if (body.text && body.text.trim() !== '') {
-          items.push(body.text.trim());
+          await env.DB.prepare("INSERT INTO items (text) VALUES (?)").bind(body.text.trim()).run();
         }
-        return new Response(JSON.stringify({ success: true, items }), {
+
+        // Return updated items list from DB to match original response format
+        const { results } = await env.DB.prepare("SELECT text FROM items ORDER BY id ASC").all();
+        const itemsList = results.map(row => row.text);
+
+        return new Response(JSON.stringify({ success: true, items: itemsList }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } catch (err) {
@@ -48,13 +61,31 @@ export default {
 
     // 4. DELETE /items/:id
     if (request.method === 'DELETE' && url.pathname.startsWith('/items/')) {
-      const index = parseInt(url.pathname.split('/')[2]);
-      if (!isNaN(index) && index >= 0 && index < items.length) {
-        items.splice(index, 1);
+      try {
+        const index = parseInt(url.pathname.split('/')[2]);
+        
+        if (!isNaN(index) && index >= 0) {
+          // Find the exact item id based on index position to safely delete
+          const { results } = await env.DB.prepare("SELECT id FROM items ORDER BY id ASC").all();
+          if (index < results.length) {
+            const targetId = results[index].id;
+            await env.DB.prepare("DELETE FROM items WHERE id = ?").bind(targetId).run();
+          }
+        }
+
+        // Return updated items list after deletion
+        const { results } = await env.DB.prepare("SELECT text FROM items ORDER BY id ASC").all();
+        const itemsList = results.map(row => row.text);
+
+        return new Response(JSON.stringify({ success: true, items: itemsList }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
-      return new Response(JSON.stringify({ success: true, items }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
     }
 
     return new Response('Not Found', { status: 404, headers: corsHeaders });

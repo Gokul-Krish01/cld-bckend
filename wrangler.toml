@@ -2,10 +2,16 @@ name = "cld-bckend"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
-#  Production Environment
+# Production Environment
 [env.production]
 name = "cld-bckend-prod"
+d1_databases = [
+  { binding = "DB", database_name = "cld-bckend-db", database_id = "257b4bba-b658-4a89-8575-2a4debf76684" }
+]
 
-#  Staging Environment
+# Staging Environment
 [env.staging]
 name = "cld-bckend-staging"
+d1_databases = [
+  { binding = "DB", database_name = "cld-bckend-db", database_id = "257b4bba-b658-4a89-8575-2a4debf76684" }
+]
