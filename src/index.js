@@ -160,6 +160,10 @@ export default {
       }
     }
 
-    return new Response('Not Found', { status: 404, headers: corsHeaders });
+    
+    return new Response(JSON.stringify({ error: 'Not Found' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   },
 };
