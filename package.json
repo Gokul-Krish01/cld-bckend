@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "vitest run"
 },
   "devDependencies": {
     "wrangler": "^3.0.0"
