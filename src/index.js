@@ -16,7 +16,7 @@ export default {
 
     // 1. Root path check (Welcome message)
     if (url.pathname === '/') {
-      return new Response("Hello from Cloudflare Worker! CI/CD is working perfectly with testttttttt", {
+      return new Response("thambiii from Cloudflare Worker! CI/CD is working perfectly with testttttttt", {
         headers: corsHeaders
       });
     }
