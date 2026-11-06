@@ -1,4 +1,3 @@
-// test/index.test.js
 import { describe, it, expect } from 'vitest';
 import worker from '../src/index.js';
 
