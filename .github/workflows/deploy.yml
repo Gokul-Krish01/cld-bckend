@@ -46,11 +46,12 @@ jobs:
       - name: Run Unit Tests
         run: npm test
 
-  # 3️⃣ Stage 3: Deploy Phase (Branch-ku thaguntha maadhiri Staging/Production-ku pogum)
-  deploy:
+  # 3️⃣ Stage 3: Deploy to Staging (Staging branch-la push pannina mattum)
+  deploy-staging:
     needs: test
+    if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
-    name: Deploy to Cloudflare
+    name: Deploy to Staging
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -63,25 +64,15 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # 🚀 Case A: Staging branch-la push pannina, Staging environment-ku deploy aagum
       - name: Deploy to Staging
-        if: github.ref == 'refs/heads/staging'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           environment: staging
 
-      # 🚀 Case B: Main branch-la push pannina, Production environment-ku deploy aagum
-      - name: Deploy to Production
-        if: github.ref == 'refs/heads/main'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          environment: production
-
   # 4️⃣ Stage 4: Auto-Merge Staging to Main (Staging success aanathum auto-va main-ku merge aagum)
   auto-merge:
-    needs: deploy
+    needs: deploy-staging
     if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     steps:
@@ -97,3 +88,27 @@ jobs:
           git checkout main
           git merge staging --no-ff -m "Automated merge: staging -> main"
           git push origin main
+
+  # 5️⃣ Stage 5: Deploy to Production (Main branch-la irunthalo,illa auto-merge aanalum iredct-ah run aagum)
+  deploy-production:
+    needs: [test, auto-merge]
+    if: always() && (github.ref == 'refs/heads/main' || needs.auto-merge.result == 'success')
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Deploy to Production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          environment: production
