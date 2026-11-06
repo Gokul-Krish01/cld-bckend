@@ -100,7 +100,7 @@ export default {
           });
         }
 
-        await env.MY_BUCKET.put(fileName, request.body, {
+        await env.cld_bckend_bucket.put(fileName, request.body, {
           httpMetadata: { contentType: request.headers.get('content-type') || 'application/octet-stream' }
         });
 
@@ -118,7 +118,7 @@ export default {
     // 6. LIST FILES: GET /files
     if (request.method === 'GET' && url.pathname === '/files') {
       try {
-        const listed = await env.MY_BUCKET.list();
+        const listed = await env.cld_bckend_bucket.list();
         const files = listed.objects.map(obj => ({
           key: obj.key,
           size: obj.size,
@@ -147,7 +147,7 @@ export default {
           });
         }
 
-        await env.MY_BUCKET.delete(fileName);
+        await env.cld_bckend_bucket.delete(fileName);
 
         return new Response(JSON.stringify({ success: true, deleted: fileName }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
