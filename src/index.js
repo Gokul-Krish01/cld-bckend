@@ -143,21 +143,15 @@ export default {
       }
     }
 
-    // POST /pg/items (Insert into Neon Postgres via Hyperdrive)
-    if (request.method === 'POST' && url.pathname === '/pg/items') {
+    // GET /pg/items (Fetch from Neon Postgres via Hyperdrive)
+    if (request.method === 'GET' && url.pathname === '/pg/items') {
       const client = new Client({
         connectionString: env.HYPERDRIVE.connectionString,
       });
 
       try {
-        const body = await request.json();
         await client.connect();
-
-        if (body.text && body.text.trim() !== '') {
-          await client.query('INSERT INTO items (text) VALUES ($1);', [body.text.trim()]);
-        }
-
-        const result = await client.query('SELECT * FROM items ORDER BY id ASC;');
+        const result = await client.query('SELECT * FROM demo1 ORDER BY id ASC;');
         ctx.waitUntil(client.end());
 
         return new Response(JSON.stringify({ success: true, source: "Neon via Hyperdrive", data: result.rows }), {
@@ -172,6 +166,35 @@ export default {
       }
     }
 
+    // POST /pg/items (Insert into Neon Postgres via Hyperdrive)
+    if (request.method === 'POST' && url.pathname === '/pg/items') {
+      const client = new Client({
+        connectionString: env.HYPERDRIVE.connectionString,
+      });
+
+      try {
+        const body = await request.json();
+        await client.connect();
+
+        // Use 'name' instead of 'text' to match database schema (id, name, dob)
+        if (body.name && body.name.trim() !== '') {
+          await client.query('INSERT INTO demo1 (name) VALUES ($1);', [body.name.trim()]);
+        }
+
+        const result = await client.query('SELECT * FROM demo1 ORDER BY id ASC;');
+        ctx.waitUntil(client.end());
+
+        return new Response(JSON.stringify({ success: true, source: "Neon via Hyperdrive", data: result.rows }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        await client.end();
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
     // ================= R2 STORAGE ENDPOINTS =================
 
     // UPLOAD FILE: PUT /upload/:filename
