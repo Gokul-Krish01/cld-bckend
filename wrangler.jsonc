@@ -32,5 +32,21 @@
       "binding": "HYPERDRIVE",
       "id": "c4e863fce3bd4dd4850599dc8b73a1af"
     }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "COUNTER_DO",
+        "class_name": "Counter"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["Counter"]
+    }
   ]
 }
