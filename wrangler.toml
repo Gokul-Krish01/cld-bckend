@@ -22,10 +22,6 @@ r2_buckets = [
   { binding = "cld_bckend_bucket", bucket_name = "cld-bckend-bucket" }
 ]
 
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "c4e863fce3bd4dd4850599dc8b73a1af",
-      
-    }
-  ]
+  [[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "1d9c8700a6831fd920e3e3a4d27d9253"
