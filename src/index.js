@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { neon } from '@neondatabase/serverless';
 
 export default {
   async fetch(request, env, ctx) {
@@ -14,7 +14,6 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // 1. Root path check (Welcome message)
     if (url.pathname === '/') {
       return new Response("thambiii from Cloudflare Worker! CI/CD is working perfectly with testttttttt", {
         headers: corsHeaders
@@ -23,7 +22,6 @@ export default {
 
     // ================= D1 DATABASE ENDPOINTS =================
 
-    // 2. GET /items
     if (request.method === 'GET' && url.pathname === '/items') {
       try {
         const { results } = await env.DB.prepare("SELECT text FROM items ORDER BY id ASC").all();
@@ -40,7 +38,6 @@ export default {
       }
     }
 
-    // 3. POST /items
     if (request.method === 'POST' && url.pathname === '/items') {
       try {
         const body = await request.json();
@@ -62,139 +59,65 @@ export default {
       }
     }
 
-    // 4. DELETE /items/:id
-    if (request.method === 'DELETE' && url.pathname.startsWith('/items/')) {
-      try {
-        const index = parseInt(url.pathname.split('/')[2]);
-        
-        if (!isNaN(index) && index >= 0) {
-          const { results } = await env.DB.prepare("SELECT id FROM items ORDER BY id ASC").all();
-          if (index < results.length) {
-            const targetId = results[index].id;
-            await env.DB.prepare("DELETE FROM items WHERE id = ?").bind(targetId).run();
-          }
-        }
+    // ================= NEON POSTGRES (DIRECT POOLER VIA SECRET) =================
 
-        const { results } = await env.DB.prepare("SELECT text FROM items ORDER BY id ASC").all();
-        const itemsList = results.map(row => row.text);
-
-        return new Response(JSON.stringify({ success: true, items: itemsList }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-    }
-
-    // ================= NEON POSTGRES + HYPERDRIVE ENDPOINTS =================
-
-    // GET /pg/items (Fetch from Neon Postgres via Hyperdrive with auto-table creation)
     if (request.method === 'GET' && url.pathname === '/pg/items') {
-      const pool = new Pool({
-        connectionString: env.HYPERDRIVE.connectionString,
-        max: 1,
-      });
-
       try {
-        const client = await pool.connect();
-        try {
-          await client.query(`
-            CREATE TABLE IF NOT EXISTS demo1 (
-              id SERIAL PRIMARY KEY,
-              name TEXT,
-              dob DATE
-            );
-          `);
+        const sql = neon(env.NEON_URL);
+        
+        await sql`
+          CREATE TABLE IF NOT EXISTS demo1 (
+            id SERIAL PRIMARY KEY,
+            name TEXT,
+            dob DATE
+          );
+        `;
 
-          const result = await client.query('SELECT * FROM demo1 ORDER BY id ASC;');
-          return new Response(JSON.stringify({ success: true, source: "Neon via Hyperdrive", data: result.rows }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        } finally {
-          client.release();
-        }
+        const rows = await sql`SELECT * FROM demo1 ORDER BY id ASC;`;
+
+        return new Response(JSON.stringify({ success: true, source: "Neon Direct Pooler", data: rows }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
-      } finally {
-        await pool.end();
       }
     }
 
-    // POST /pg/items (Insert into Neon Postgres via Hyperdrive with auto-table creation)
     if (request.method === 'POST' && url.pathname === '/pg/items') {
-      const pool = new Pool({
-        connectionString: env.HYPERDRIVE.connectionString,
-        max: 1,
-      });
-
       try {
         const body = await request.json();
-        const client = await pool.connect();
-        try {
-          await client.query(`
-            CREATE TABLE IF NOT EXISTS demo1 (
-              id SERIAL PRIMARY KEY,
-              name TEXT,
-              dob DATE
-            );
-          `);
+        const sql = neon(env.NEON_URL);
 
-          if (body.name && body.name.trim() !== '') {
-            await client.query('INSERT INTO demo1 (name) VALUES ($1);', [body.name.trim()]);
-          }
+        await sql`
+          CREATE TABLE IF NOT EXISTS demo1 (
+            id SERIAL PRIMARY KEY,
+            name TEXT,
+            dob DATE
+          );
+        `;
 
-          const result = await client.query('SELECT * FROM demo1 ORDER BY id ASC;');
-          return new Response(JSON.stringify({ success: true, source: "Neon via Hyperdrive", data: result.rows }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        } finally {
-          client.release();
+        if (body.name && body.name.trim() !== '') {
+          await sql`INSERT INTO demo1 (name) VALUES (${body.name.trim()});`;
         }
+
+        const rows = await sql`SELECT * FROM demo1 ORDER BY id ASC;`;
+
+        return new Response(JSON.stringify({ success: true, source: "Neon Direct Pooler", data: rows }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
-      } finally {
-        await pool.end();
       }
     }
 
     // ================= R2 STORAGE ENDPOINTS =================
 
-    // 5. UPLOAD FILE: PUT /upload/:filename
-    if (request.method === 'PUT' && url.pathname.startsWith('/upload/')) {
-      try {
-        const fileName = url.pathname.replace('/upload/', '');
-        if (!fileName) {
-          return new Response(JSON.stringify({ error: 'Filename is required' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-
-        await env.cld_bckend_bucket.put(fileName, request.body, {
-          httpMetadata: { contentType: request.headers.get('content-type') || 'application/octet-stream' }
-        });
-
-        return new Response(JSON.stringify({ success: true, uploaded: fileName }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-    }
-
-    // 6. LIST FILES: GET /files
     if (request.method === 'GET' && url.pathname === '/files') {
       try {
         const listed = await env.cld_bckend_bucket.list();
@@ -214,32 +137,8 @@ export default {
         });
       }
     }
-
-    // 7. DELETE FILE: DELETE /files/:filename
-    if (request.method === 'DELETE' && url.pathname.startsWith('/files/')) {
-      try {
-        const fileName = url.pathname.replace('/files/', '');
-        if (!fileName) {
-          return new Response(JSON.stringify({ error: 'Filename is required' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-
-        await env.cld_bckend_bucket.delete(fileName);
-
-        return new Response(JSON.stringify({ success: true, deleted: fileName }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-    }
     
-    return new Response(JSON.exports ? JSON.exports({ error: 'Not Found' }) : JSON.stringify({ error: 'Not Found' }), {
+    return new Response(JSON.stringify({ error: 'Not Found' }), {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
