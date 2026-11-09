@@ -2,6 +2,8 @@ name = "cld-bckend"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
+compatibility_flags = ["nodejs_compat"]
+
 # Production Environment
 [env.production]
 name = "cld-bckend-prod"
