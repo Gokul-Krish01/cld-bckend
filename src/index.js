@@ -91,58 +91,6 @@ export default {
 
     // ================= NEON POSTGRES + HYPERDRIVE ENDPOINTS =================
 
-   // GET /pg/items (Fetch from Neon Postgres via Hyperdrive)
-    if (request.method === 'GET' && url.pathname === '/pg/items') {
-      const client = new Client({
-        connectionString: env.HYPERDRIVE.connectionString,
-      });
-
-      try {
-        await client.connect();
-        const result = await client.query('SELECT * FROM demo1 ORDER BY id ASC;'); // <-- items ku badhila demo1
-        ctx.waitUntil(client.end());
-
-        return new Response(JSON.stringify({ success: true, source: "Neon via Hyperdrive", data: result.rows }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      } catch (err) {
-        await client.end();
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-    }
-
-    // POST /pg/items (Insert into Neon Postgres via Hyperdrive)
-    if (request.method === 'POST' && url.pathname === '/pg/items') {
-      const client = new Client({
-        connectionString: env.HYPERDRIVE.connectionString,
-      });
-
-      try {
-        const body = await request.json();
-        await client.connect();
-
-        if (body.text && body.text.trim() !== '') {
-          await client.query('INSERT INTO demo1 (text) VALUES ($1);', [body.text.trim()]); // <-- items ku badhila demo1
-        }
-
-        const result = await client.query('SELECT * FROM demo1 ORDER BY id ASC;'); // <-- items ku badhila demo1
-        ctx.waitUntil(client.end());
-
-        return new Response(JSON.stringify({ success: true, source: "Neon via Hyperdrive", data: result.rows }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      } catch (err) {
-        await client.end();
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-    }
-
     // GET /pg/items (Fetch from Neon Postgres via Hyperdrive)
     if (request.method === 'GET' && url.pathname === '/pg/items') {
       const client = new Client({
@@ -176,7 +124,7 @@ export default {
         const body = await request.json();
         await client.connect();
 
-        // Use 'name' instead of 'text' to match database schema (id, name, dob)
+        // Using 'name' to match the database schema (id, name, dob)
         if (body.name && body.name.trim() !== '') {
           await client.query('INSERT INTO demo1 (name) VALUES ($1);', [body.name.trim()]);
         }
@@ -195,6 +143,7 @@ export default {
         });
       }
     }
+
     // ================= R2 STORAGE ENDPOINTS =================
 
     // UPLOAD FILE: PUT /upload/:filename
