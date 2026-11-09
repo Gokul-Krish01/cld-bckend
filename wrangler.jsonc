@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cld-bckend",
+  "main": "src/index.js",
+  "compatibility_date": "2026-01-01",
+  
+  "observability": {
+    "enabled": true
+  },
+
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cld-bckend-db",
+      "database_id": "257b4bba-b658-4a89-8575-2a4debf76684"
+    }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "cld_bckend_bucket",
+      "bucket_name": "cld-bckend-bucket"
+    }
+  ],
+
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "c4e863fce3bd4dd4850599dc8b73a1af"
+    }
+  ]
+}

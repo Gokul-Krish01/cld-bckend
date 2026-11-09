@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import { Pool } from 'pg';
 
 export default {
   async fetch(request, env, ctx) {
@@ -15,7 +15,7 @@ export default {
     }
 
     if (url.pathname === '/') {
-      return new Response("thambiii from Cloudflare Worker! CI/CD is working perfectly with testttttttt", {
+      return new Response("thambiii from Cloudflare Worker!CI/CD is working perfectly", {
         headers: corsHeaders
       });
     }
@@ -52,34 +52,47 @@ export default {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } catch (err) {
-        return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+        return new Response(JSON.stringify({ error: 'Invalid JSON or Request' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
     }
 
-    // ================= NEON POSTGRES (DIRECT POOLER VIA SECRET) =================
+    // ================= HYPERDRIVE + NEON POSTGRES ENDPOINTS =================
 
     if (request.method === 'GET' && url.pathname === '/pg/items') {
       try {
-        const sql = neon(env.NEON_URL);
+        const pool = new Pool({
+          connectionString: env.HYPERDRIVE.connectionString,
+          max: 1,
+        });
+
+        const client = await pool.connect();
         
-        await sql`
+        await client.query(`
           CREATE TABLE IF NOT EXISTS demo1 (
             id SERIAL PRIMARY KEY,
             name TEXT,
             dob DATE
           );
-        `;
+        `);
 
-        const rows = await sql`SELECT * FROM demo1 ORDER BY id ASC;`;
+        const res = await client.query('SELECT * FROM demo1 ORDER BY id ASC;');
+        
+        client.release();
+        await pool.end();
 
-        return new Response(JSON.stringify({ success: true, source: "Neon Direct Pooler", data: rows }), {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: "Hyperdrive + Neon connected successfully!", 
+          data: res.rows 
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
+
       } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -89,23 +102,63 @@ export default {
     if (request.method === 'POST' && url.pathname === '/pg/items') {
       try {
         const body = await request.json();
-        const sql = neon(env.NEON_URL);
+        const pool = new Pool({
+          connectionString: env.HYPERDRIVE.connectionString,
+          max: 1,
+        });
 
-        await sql`
+        const client = await pool.connect();
+
+        await client.query(`
           CREATE TABLE IF NOT EXISTS demo1 (
             id SERIAL PRIMARY KEY,
             name TEXT,
             dob DATE
           );
-        `;
+        `);
 
         if (body.name && body.name.trim() !== '') {
-          await sql`INSERT INTO demo1 (name) VALUES (${body.name.trim()});`;
+          await client.query('INSERT INTO demo1 (name) VALUES ($1);', [body.name.trim()]);
         }
 
-        const rows = await sql`SELECT * FROM demo1 ORDER BY id ASC;`;
+        const res = await client.query('SELECT * FROM demo1 ORDER BY id ASC;');
+        
+        client.release();
+        await pool.end();
 
-        return new Response(JSON.stringify({ success: true, source: "Neon Direct Pooler", data: rows }), {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: "Item inserted via Hyperdrive!", 
+          data: res.rows 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // ================= R2 STORAGE ENDPOINTS =================
+
+    if (request.method === 'PUT' && url.pathname.startsWith('/upload/')) {
+      try {
+        const fileName = url.pathname.replace('/upload/', '');
+        if (!fileName) {
+          return new Response(JSON.stringify({ error: 'Filename is required' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        await env.cld_bckend_bucket.put(fileName, request.body, {
+          httpMetadata: { contentType: request.headers.get('content-type') || 'application/octet-stream' }
+        });
+
+        return new Response(JSON.stringify({ success: true, uploaded: fileName }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } catch (err) {
@@ -115,8 +168,6 @@ export default {
         });
       }
     }
-
-    // ================= R2 STORAGE ENDPOINTS =================
 
     if (request.method === 'GET' && url.pathname === '/files') {
       try {
@@ -128,6 +179,29 @@ export default {
         }));
 
         return new Response(JSON.stringify({ success: true, files }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    if (request.method === 'DELETE' && url.pathname.startsWith('/files/')) {
+      try {
+        const fileName = url.pathname.replace('/files/', '');
+        if (!fileName) {
+          return new Response(JSON.stringify({ error: 'Filename is required' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        await env.cld_bckend_bucket.delete(fileName);
+
+        return new Response(JSON.stringify({ success: true, deleted: fileName }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } catch (err) {
