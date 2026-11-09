@@ -16,7 +16,7 @@ export default {
 
     // 1. Root path check
     if (url.pathname === '/') {
-      return new Response("thambiii from Cloudflare Worker! Multi-DB API (D1 + R2 + Neon Hyperdrive) is running perfectly!", {
+      return new Response("thambiii from Cloudflare Worker...CI/CD is working perfectly", {
         headers: corsHeaders
       });
     }
